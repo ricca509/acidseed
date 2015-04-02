@@ -1,0 +1,15 @@
+{
+  "name": "acidseed",
+  "version": "0.0.0",
+  "description": "Magic caching happening",
+  "main": "index.js",
+  "dependencies": {
+    "body-parser": "~1.12.2",
+    "express": "~4.12.3"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "BSD-2-Clause"
+}
