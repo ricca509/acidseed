@@ -17,8 +17,9 @@ redisClient.auth(rtg.auth.split(':')[1]);
 // Parses body as JSON
 app.use(bodyParser.json());
 
-var port = process.env.PORT || 3131;
-console.log('port:', port);
+var port = process.env.PORT || 3131,
+    TTL = 24 * 60 * 60 * 1000;
+
 /**
  * Handles the cache request
  * @param {http.IncomingMessage}  req The node request
@@ -32,25 +33,39 @@ var handleRequest = function (req, res) {
 
 	// Check the redis server for the key
 	redisClient.get(key, function (err, redisData) {
-		if (!redisData || noCache === true) {
+		var parsedApiResp;
+
+		if (!redisData || noCache) {
 			console.log(('No Redis cache for ' + key).yellow);
 
 			proxyRequest(null, req, function onData (data) {
-				var parsedApiResp = JSON.parse(data);
-
-				// Save the data to redis using the generated key
-				console.log('Saving to Redis'.green);
-				redisClient.set(key, data, redis.print);
+				parsedApiResp = JSON.parse(data);
 
 				// Return the data back
-				res.json(parsedApiResp);
+        res.json(parsedApiResp);
+
+        _.extend(parsedApiResp, {
+          cache: {
+            date: new Date().toISOString(),
+						hits: 0
+          }
+        });
+
+				console.log('Saving to Redis'.green);
+				storeInRedis(redisClient, key, JSON.stringify(parsedApiResp), TTL);
 			}, function onError () {
 				console.log(('problem with request: ' + e.message).red);
 			});
 
 		} else {
 			console.log(('Response from Redis for ' + key).green);
-			res.json(JSON.parse(redisData));
+			parsedApiResp = JSON.parse(redisData);
+
+			res.json(parsedApiResp);
+
+			parsedApiResp.cache.hits++;
+			console.log('Saving to Redis'.green);
+			storeInRedis(redisClient, key, JSON.stringify(parsedApiResp), TTL);
 		}
 	});
 };
@@ -86,6 +101,17 @@ var generateKey = function (request) {
     }
 
 	return [cacheKeyPrefix, sha256(hashValue)].join('');
+};
+
+/**
+ * Helper method to store the response in Redis
+ * @param {} 				redisClient The Redis client instance
+ * @param {String}  key         The redis key
+ * @param {String}  val         The API response stringified
+ * @param {Number}  ttl         The TTL for the KEY
+ */
+var storeInRedis = function (redisClient, key, val, ttl) {
+	return redisClient.setex(key, TTL, val, redis.print);
 };
 
 /**
