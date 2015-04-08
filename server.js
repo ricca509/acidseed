@@ -19,10 +19,15 @@ app.use(bodyParser.json());
 
 var port = process.env.PORT || 3131;
 
+/**
+ * Handles the cache request
+ * @param {http.IncomingMessage}  req The node request
+ * @param {http.ServerResponse}   res The node response
+ */
 var handleRequest = function (req, res) {
-    'use strict';
+  'use strict';
 	// Create a string representation of the request for the key
-	var key = getKey(req);
+	var key = generateKey(req);
 
 	// Check the redis server for the key
 	redisClient.get(key, function (err, reply) {
@@ -67,13 +72,14 @@ router.post('/request', handleRequest);
 // TEMP HELPERS
 
 /**
- *
+ * Generates a unique key for Redis
+ * @param {http.IncomingMessage} request The original request
  */
-var getKey = function (request) {
+var generateKey = function (request) {
 	var key, hashValue,
 		cacheKeyPrefix = 'cache.';
 
-    hashValue = JSON.stringify(request.query.requestedUrl);
+    hashValue = JSON.stringify(request.query.apiUrl);
 
     if (request.method === 'POST') {
         hashValue = JSON.stringify(request.body);
@@ -83,13 +89,17 @@ var getKey = function (request) {
 };
 
 /**
- *
+ * Proxies the request to the original API
+ * @param {Object} options        Options to pass to the http.request
+ * @param {http.IncomingMessage} originalReq    The original request object
+ * @param {Function} onData       Callback to call when data is coming back from the API
+ * @param {Function} onError      Callback to call in case of any error
  */
 var proxyRequest = function (options, originalReq, onData, onError) {
     'use strict';
     console.log('Damn! Calling the API'.green);
 
-    var apiUrl = url.parse(decodeURI(originalReq.query.requestedUrl));
+    var apiUrl = url.parse(decodeURI(originalReq.query.apiUrl));
 
     var defOptions = {
         hostname: apiUrl.hostname,
@@ -107,18 +117,18 @@ var proxyRequest = function (options, originalReq, onData, onError) {
 		console.log('STATUS: ' + response.statusCode);
 
 		response.setEncoding('utf8');
-		response.on('data', function(data) {
+		response.on('data', function (data) {
 			apiResp += data;
 		});
 
-		response.on('end', function() {
+		response.on('end', function () {
 			onData(apiResp);
 		});
 	});
 
 	request.on('error', onError);
 
-	if (originalReq.body) {
+	if (originalReq.method === 'POST') {
 		// write data to request body
 		request.write(JSON.stringify(originalReq.body));
 	}
@@ -131,5 +141,6 @@ app.use('/cache', router);
 
 // START THE SERVER
 // =============================================================================
-app.listen(port);
-console.log(('acidseed: Magic happens on port ' + port).green);
+app.listen(port, function () {
+  console.log(('acidseed: Magic happens on port ' + port).green);
+});
