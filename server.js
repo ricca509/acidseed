@@ -27,12 +27,12 @@ console.log('port:', port);
 var handleRequest = function (req, res) {
   'use strict';
 	// Create a string representation of the request for the key
-	var noCache = req.query.noCache,
+	var noCache = _.isBoolean(req.query.noCache) ? req.query.noCache : req.query.noCache === 'true',
       key = generateKey(req);
 
 	// Check the redis server for the key
 	redisClient.get(key, function (err, redisData) {
-		if (!redisData || !!noCache === true) {
+		if (!redisData || noCache === true) {
 			console.log(('No Redis cache for ' + key).yellow);
 
 			proxyRequest(null, req, function onData (data) {
