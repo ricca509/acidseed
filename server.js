@@ -18,7 +18,7 @@ redisClient.auth(rtg.auth.split(':')[1]);
 app.use(bodyParser.json());
 
 var port = process.env.PORT || 3131;
-
+console.log('port:', port);
 /**
  * Handles the cache request
  * @param {http.IncomingMessage}  req The node request
