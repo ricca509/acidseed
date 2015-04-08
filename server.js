@@ -27,15 +27,15 @@ console.log('port:', port);
 var handleRequest = function (req, res) {
   'use strict';
 	// Create a string representation of the request for the key
-	var key = generateKey(req);
+	var noCache = req.query.noCache,
+      key = generateKey(req);
 
 	// Check the redis server for the key
-	redisClient.get(key, function (err, reply) {
-		// If it exists
-		if (!reply) {
+	redisClient.get(key, function (err, redisData) {
+		if (!redisData || noCache === true) {
 			console.log(('No Redis cache for ' + key).yellow);
 
-			proxyRequest(null, req, function onData(data) {
+			proxyRequest(null, req, function onData (data) {
 				var parsedApiResp = JSON.parse(data);
 
 				// Save the data to redis using the generated key
@@ -44,13 +44,13 @@ var handleRequest = function (req, res) {
 
 				// Return the data back
 				res.json(parsedApiResp);
-			}, function onError() {
+			}, function onError () {
 				console.log(('problem with request: ' + e.message).red);
 			});
 
 		} else {
 			console.log(('Response from Redis for ' + key).green);
-			res.json(JSON.parse(reply));
+			res.json(JSON.parse(redisData));
 		}
 	});
 };
