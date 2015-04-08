@@ -32,7 +32,7 @@ var handleRequest = function (req, res) {
 
 	// Check the redis server for the key
 	redisClient.get(key, function (err, redisData) {
-		if (!redisData || noCache === true) {
+		if (!redisData || !!noCache === true) {
 			console.log(('No Redis cache for ' + key).yellow);
 
 			proxyRequest(null, req, function onData (data) {
