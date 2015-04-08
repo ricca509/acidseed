@@ -33,7 +33,7 @@ var handleRequest = function (req, res) {
 	redisClient.get(key, function (err, reply) {
 		// If it exists
 		if (!reply) {
-			console.log(('No Redis cache for ' + key).red);
+			console.log(('No Redis cache for ' + key).yellow);
 
 			proxyRequest(null, req, function onData(data) {
 				var parsedApiResp = JSON.parse(data);
@@ -49,7 +49,7 @@ var handleRequest = function (req, res) {
 			});
 
 		} else {
-			console.log('Response from Redis for', key);
+			console.log(('Response from Redis for ' + key).green);
 			res.json(JSON.parse(reply));
 		}
 	});
@@ -97,7 +97,7 @@ var generateKey = function (request) {
  */
 var proxyRequest = function (options, originalReq, onData, onError) {
     'use strict';
-    console.log('Damn! Calling the API'.green);
+    console.log('Damn! Calling the API'.yellow);
 
     var apiUrl = url.parse(decodeURI(originalReq.query.apiUrl));
 
