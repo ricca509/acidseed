@@ -1,12 +1,13 @@
 var express = require('express'),
-	app = express(),
-	bodyParser = require('body-parser'),
-	redis = require('redis'),
-	sha256 = require('sha256'),
-	colors = require('colors'),
-	_ = require('underscore'),
+    app = express(),
+    compress = require('compression'),
+    bodyParser = require('body-parser'),
+    redis = require('redis'),
+    sha256 = require('sha256'),
+    colors = require('colors'),
+    _ = require('underscore'),
     url = require('url'),
-	http = require('http');
+    http = require('http');
 
 var rtg = require('url').parse('redis://redistogo:3b3bd4d79bc23c76fb5b3f180f7681ae@soapfish.redistogo.com:9335/');
 var redisClient = redis.createClient(rtg.port, rtg.hostname);
@@ -14,8 +15,8 @@ redisClient.auth(rtg.auth.split(':')[1]);
 
 //var redisClient = redis.createClient();
 
-// Parses body as JSON
 app.use(bodyParser.json());
+app.use(compress());
 
 var port = process.env.PORT || 3131,
     TTL = 24 * 60 * 60 * 1000;
@@ -26,48 +27,47 @@ var port = process.env.PORT || 3131,
  * @param {http.ServerResponse}   res The node response
  */
 var handleRequest = function (req, res) {
-  'use strict';
-	// Create a string representation of the request for the key
-	var noCache = _.isBoolean(req.query.noCache) ? req.query.noCache : req.query.noCache === 'true',
-      key = generateKey(req);
+    'use strict';
+    var noCache = _.isBoolean(req.query.noCache) ? req.query.noCache : req.query.noCache === 'true',
+        key = generateKey(req);
 
-	// Check the redis server for the key
-	redisClient.get(key, function (err, redisData) {
-		var parsedApiResp;
+    // Check the redis server for the key
+    redisClient.get(key, function (err, redisData) {
+        var parsedApiResp;
 
-		if (!redisData || noCache) {
-			console.log(('No Redis cache for ' + key).yellow);
+        if (!redisData || noCache) {
+            console.log(('No Redis cache for ' + key).yellow);
 
-			proxyRequest(null, req, function onData (data) {
-				parsedApiResp = JSON.parse(data);
+            proxyRequest(null, req, function onData (data) {
+                parsedApiResp = JSON.parse(data);
 
-				// Return the data back
-        res.json(parsedApiResp);
+                // Return the data back
+                res.json(parsedApiResp);
 
-        _.extend(parsedApiResp, {
-          cache: {
-            date: new Date().toISOString(),
-						hits: 0
-          }
-        });
+                _.extend(parsedApiResp, {
+                    cache: {
+                        date: new Date().toISOString(),
+                        hits: 0
+                    }
+                });
 
-				console.log('Saving to Redis'.green);
-				storeInRedis(redisClient, key, JSON.stringify(parsedApiResp), TTL);
-			}, function onError () {
-				console.log(('problem with request: ' + e.message).red);
-			});
+                console.log('Saving to Redis'.green);
+                storeInRedis(redisClient, key, JSON.stringify(parsedApiResp), TTL);
+            }, function onError (e) {
+                console.log(('problem with request: ' + e.message).red);
+            });
 
-		} else {
-			console.log(('Response from Redis for ' + key).green);
-			parsedApiResp = JSON.parse(redisData);
+        } else {
+            console.log(('Response from Redis for ' + key).green);
+            parsedApiResp = JSON.parse(redisData);
 
-			res.json(parsedApiResp);
+            res.json(parsedApiResp);
 
-			parsedApiResp.cache.hits++;
-			console.log('Saving to Redis'.green);
-			storeInRedis(redisClient, key, JSON.stringify(parsedApiResp), TTL);
-		}
-	});
+            parsedApiResp.cache.hits++;
+            console.log('Saving to Redis'.green);
+            storeInRedis(redisClient, key, JSON.stringify(parsedApiResp), TTL);
+        }
+    });
 };
 
 // ROUTES FOR OUR API
@@ -75,14 +75,16 @@ var handleRequest = function (req, res) {
 var router = express.Router();
 
 router.get('/ping', function (req, res) {
-	res.json({
-		message: 'hooray! welcome to lastminute.com\'s acidseed!'
-	});
+    'use strict';
+
+    res.json({
+        message: 'hooray! welcome to lastminute.com\'s acidseed!'
+    });
 });
 
-router.get('/request', handleRequest);
+router.get('/', handleRequest);
 
-router.post('/request', handleRequest);
+router.post('/', handleRequest);
 
 // TEMP HELPERS
 
@@ -91,8 +93,10 @@ router.post('/request', handleRequest);
  * @param {http.IncomingMessage} request The original request
  */
 var generateKey = function (request) {
-	var key, hashValue,
-		cacheKeyPrefix = 'cache.';
+    'use strict';
+
+    var hashValue,
+        cacheKeyPrefix = 'cache.';
 
     hashValue = JSON.stringify(request.query.apiUrl);
 
@@ -100,7 +104,7 @@ var generateKey = function (request) {
         hashValue = JSON.stringify(request.body);
     }
 
-	return [cacheKeyPrefix, sha256(hashValue)].join('');
+    return [cacheKeyPrefix, sha256(hashValue)].join('');
 };
 
 /**
@@ -111,7 +115,9 @@ var generateKey = function (request) {
  * @param {Number}  ttl         The TTL for the KEY
  */
 var storeInRedis = function (redisClient, key, val, ttl) {
-	return redisClient.setex(key, TTL, val, redis.print);
+    'use strict';
+
+    return redisClient.setex(key, TTL, val, redis.print);
 };
 
 /**
@@ -137,36 +143,39 @@ var proxyRequest = function (options, originalReq, onData, onError) {
 
     _.extend(defOptions, options);
 
-	// Forward the request to the endpoint passed in the querystring
-	var request = http.request(defOptions, function (response) {
-		var apiResp = '';
-		console.log('STATUS: ' + response.statusCode);
+    // Forward the request to the endpoint passed in the querystring
+    var request = http.request(defOptions, function (response) {
+        var apiResp = '';
+        console.log('STATUS: ' + response.statusCode);
 
-		response.setEncoding('utf8');
-		response.on('data', function (data) {
-			apiResp += data;
-		});
+        response.setEncoding('utf8');
+        response.on('data', function (data) {
+            apiResp += data;
+        });
 
-		response.on('end', function () {
-			onData(apiResp);
-		});
-	});
+        response.on('end', function () {
+            onData(apiResp);
+        });
+    });
 
-	request.on('error', onError);
+    request.on('error', onError);
 
-	if (originalReq.method === 'POST') {
-		// write data to request body
-		request.write(JSON.stringify(originalReq.body));
-	}
-	request.end();
+    if (originalReq.method === 'POST') {
+        // write data to request body
+        request.write(JSON.stringify(originalReq.body));
+    }
+
+    request.end();
 };
 
 // REGISTER OUR ROUTES -------------------------------
-// All of our routes will be prefixed with /api
+// All of our routes will be prefixed with /cache
 app.use('/cache', router);
 
 // START THE SERVER
 // =============================================================================
 app.listen(port, function () {
-  console.log(('acidseed: Magic happens on port ' + port).green);
+    'use strict';
+
+    console.log(('acidseed: Magic happens on port ' + port).green);
 });
