@@ -1,14 +1,17 @@
 var redis = require('redis'),
-	sha256 = require('sha256');
+    sha256 = require('sha256');
 
 var TTL = 24 * 60 * 60 * 1000;
 
 var getClient = function (redisUrl) {
-	var rtg = require('url').parse(redisUrl);
-	var redisClient = redis.createClient(rtg.port, rtg.hostname);
-	redisClient.auth(rtg.auth.split(':')[1]);
+    var rtg = require('url').parse(redisUrl);
+    var redisClient = redis.createClient(rtg.port, rtg.hostname);
 
-	return redisClient;
+    if(rtg.auth) {
+        redisClient.auth(rtg.auth.split(':')[1]);
+    }
+
+    return redisClient;
 };
 
 /**
@@ -45,7 +48,7 @@ var storeInRedis = function (redisClient, key, val) {
 
 
 module.exports = {
-	getClient: getClient,
-	generateKey: generateKey,
-	store: storeInRedis
+    getClient: getClient,
+    generateKey: generateKey,
+    store: storeInRedis
 };

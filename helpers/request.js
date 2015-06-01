@@ -1,7 +1,7 @@
-var	_ = require('underscore'),
-	url = require('url'),
-	http = require('http'),
-	redisHelper = require('./redis');
+var _ = require('underscore'),
+    url = require('url'),
+    http = require('http'),
+    redisHelper = require('./redis');
 
 /**
  * Proxies the request to the original API
@@ -84,7 +84,7 @@ var handleRequest = function (redisClient, req, res) {
                 console.log('Saving to Redis'.green);
                 redisHelper.store(redisClient, key, JSON.stringify(parsedApiResp));
             }, function onError (e) {
-                console.log(('problem with request: ' + e.message).red);
+                console.log(('Problem with request: ' + e.message).red);
             });
 
         } else {
@@ -101,5 +101,5 @@ var handleRequest = function (redisClient, req, res) {
 };
 
 module.exports = {
-	handle: handleRequest
+    handle: handleRequest
 };
