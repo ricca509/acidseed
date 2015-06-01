@@ -31,6 +31,12 @@ var proxyRequest = function (options, originalReq, onData, onError) {
         var apiResp = '';
         console.log('STATUS: ' + response.statusCode);
 
+        if (response.statusCode !== 200) {
+            console.log('Not saving anything that does not return an HTTP 200');
+
+            return;
+        }
+
         response.setEncoding('utf8');
         response.on('data', function (data) {
             apiResp += data;
