@@ -17,7 +17,7 @@ var redisClient = redisHelper.getClient(process.env.REDIS_URL || 'redis://localh
 // =============================================================================
 var router = express.Router();
 
-router.get('/ping', function (req, res) {
+router.get('/ping', (req, res) => {
     'use strict';
 
     res.json({
@@ -35,7 +35,7 @@ app.use('/cache', router);
 
 // START THE SERVER
 // =============================================================================
-app.listen(port, function () {
+app.listen(port, () => {
     'use strict';
 
     console.log(('acidseed: magic is happening on port ' + port).green);

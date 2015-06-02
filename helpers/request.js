@@ -10,7 +10,7 @@ var _ = require('underscore'),
  * @param {Function} onData       Callback to call when data is coming back from the API
  * @param {Function} onError      Callback to call in case of any error
  */
-var proxyRequest = function (options, originalReq, onData, onError) {
+var proxyRequest = (options, originalReq, onData, onError) => {
     'use strict';
     console.log('Damn! Calling the API'.yellow);
 
@@ -27,21 +27,17 @@ var proxyRequest = function (options, originalReq, onData, onError) {
     _.extend(defOptions, options);
 
     // Forward the request to the endpoint passed in the querystring
-    var request = http.request(defOptions, function (response) {
+    var request = http.request(defOptions, (response) => {
         var apiResp = '';
-        console.log('STATUS: ' + response.statusCode);
-
-        if (response.statusCode !== 200) {
-            onError('Not saving anything that does not return an HTTP 200');
-        }
+        console.log('Server response: ' + response.statusCode);
 
         response.setEncoding('utf8');
-        response.on('data', function (data) {
+        response.on('data', (data) => {
             apiResp += data;
         });
 
-        response.on('end', function () {
-            onData(apiResp);
+        response.on('end', () => {
+            onData(apiResp, response.statusCode);
         });
     });
 
@@ -60,19 +56,29 @@ var proxyRequest = function (options, originalReq, onData, onError) {
  * @param {http.IncomingMessage}  req The node request
  * @param {http.ServerResponse}   res The node response
  */
-var handleRequest = function (redisClient, req, res) {
+var handleRequest = (redisClient, req, res) => {
     'use strict';
     var noCache = _.isBoolean(req.query.noCache) ? req.query.noCache : req.query.noCache === 'true',
         key = redisHelper.generateKey(req);
 
     // Check the redis server for the key
-    redisClient.get(key, function (err, redisData) {
+    redisClient.get(key, (err, redisData) => {
         var parsedApiResp;
 
         if (!redisData || noCache) {
             console.log(('No Redis cache for ' + key).yellow);
 
-            proxyRequest(null, req, function onData (data) {
+            proxyRequest(null, req, (data, httpCode) => {
+                if (httpCode !== 200) {
+                    console.log(('HTTP response:' + httpCode + ' - not storing').red);
+
+                    res.json({
+                        error: 'HTTP response is ' + httpCode + ': not storing.'
+                    });
+
+                    return;
+                }
+
                 parsedApiResp = JSON.parse(data);
 
                 // Return the data back
@@ -87,7 +93,7 @@ var handleRequest = function (redisClient, req, res) {
 
                 console.log('Saving to Redis'.green);
                 redisHelper.store(redisClient, key, JSON.stringify(parsedApiResp));
-            }, function onError (e) {
+            }, (e) => {
                 console.log(('Problem with request: ' + e.message).red);
             });
 

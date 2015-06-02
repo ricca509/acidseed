@@ -3,7 +3,7 @@ var redis = require('redis'),
 
 var TTL = 24 * 60 * 60 * 1000;
 
-var getClient = function (redisUrl) {
+var getClient = (redisUrl) => {
     var rtg = require('url').parse(redisUrl);
     var redisClient = redis.createClient(rtg.port, rtg.hostname);
 
@@ -18,17 +18,13 @@ var getClient = function (redisUrl) {
  * Generates a unique key for Redis
  * @param {http.IncomingMessage} request The original request
  */
-var generateKey = function (request) {
+var generateKey = (request) => {
     'use strict';
+    var cacheKeyPrefix = 'cache.';
 
-    var hashValue,
-        cacheKeyPrefix = 'cache.';
-
-    hashValue = JSON.stringify(request.query.apiUrl);
-
-    if (request.method === 'POST') {
-        hashValue = JSON.stringify(request.body);
-    }
+    var hashValue = request.method === 'POST' ?
+        JSON.stringify(request.body) :
+        JSON.stringify(request.query.apiUrl);
 
     return [cacheKeyPrefix, sha256(hashValue)].join('');
 };
@@ -40,7 +36,7 @@ var generateKey = function (request) {
  * @param {String}  val         The API response stringified
  * @param {Number}  ttl         The TTL for the KEY
  */
-var storeInRedis = function (redisClient, key, val) {
+var storeInRedis = (redisClient, key, val) => {
     'use strict';
 
     return redisClient.setex(key, TTL, val, redis.print);
