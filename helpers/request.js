@@ -68,7 +68,7 @@ var handleRequest = (redisClient, req, res) => {
         if (!redisData || noCache) {
             console.log(('No Redis cache for ' + key).yellow);
 
-            proxyRequest(null, req, (data, httpCode) => {
+            proxyRequest({}, req, (data, httpCode) => {
                 if (httpCode !== 200) {
                     console.log(('HTTP response:' + httpCode + ' - not storing').red);
 

@@ -10,7 +10,7 @@ require('colors');
 app.use(bodyParser.json());
 app.use(compress());
 
-var port = process.env.PORT || 3131;
+var port = process.env.PORT || 8181;
 var redisClient = redisHelper.getClient(process.env.REDIS_URL || 'redis://localhost:6379');
 
 // ROUTES FOR OUR API
