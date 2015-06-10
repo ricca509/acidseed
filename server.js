@@ -29,10 +29,6 @@ router.get('/', requestHelper.handle.bind(this, redisClient));
 
 router.post('/', requestHelper.handle.bind(this, redisClient));
 
-// REGISTER ROUTES -------------------------------
-// All routes will be prefixed with /cache
-app.use('/cache', router);
-
 // START THE SERVER
 // =============================================================================
 app.listen(port, () => {
